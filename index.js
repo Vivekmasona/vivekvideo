@@ -19,7 +19,7 @@ app.get('/download', async (req, res) => {
     res.header('Content-Disposition', `attachment; filename="${info.videoDetails.title}.mp4"`);
     
     // Show video size in response headers
-    res.setHeader('Content-Length', info.videoDetails.lengthSeconds); // You can use 'info.videoDetails.lengthSeconds' for video duration in seconds
+   // res.setHeader('Content-Length', info.videoDetails.lengthSeconds); // You can use 'info.videoDetails.lengthSeconds' for video duration in seconds
 
     videoStream.pipe(res);
   } catch (error) {
