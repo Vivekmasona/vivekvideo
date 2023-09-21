@@ -1,24 +1,34 @@
 const express = require('express');
-const ffmpeg = require('fluent-ffmpeg');
 const app = express();
-const port = 3000;
+const ytdl = require('ytdl-core');
+const fs = require('fs');
 
-// Define a route to download audio using FFmpeg
-app.get('/audio', (req, res) => {
-  // Set the input audio file path
-  const audioFilePath = 'input_audio.mp3';
+app.get('/download', async (req, res) => {
+  const videoUrl = req.query.url; // Get the video URL from the query parameter
+  if (!videoUrl) {
+    res.status(400).send('Please provide a valid video URL');
+    return;
+  }
 
-  // Create a writable stream for the response
-  const outputStream = res;
+  try {
+    const info = await ytdl.getInfo(videoUrl);
+    const videoStream = ytdl(videoUrl, {
+      quality: 'highest',
+    });
 
-  // Configure FFmpeg
-  ffmpeg()
-    .input(audioFilePath)
-    .audioCodec('libmp3lame')
-    .toFormat('mp3')
-    .pipe(outputStream, { end: true });
+    res.header('Content-Disposition', `attachment; filename="${info.videoDetails.title}.mp4"`);
+    
+    // Show video size in response headers
+    res.setHeader('Content-Length', info.videoDetails.lengthSeconds); // You can use 'info.videoDetails.lengthSeconds' for video duration in seconds
+
+    videoStream.pipe(res);
+  } catch (error) {
+    console.error('Error:', error);
+    res.status(500).send('An error occurred');
+  }
 });
 
-app.listen(port, () => {
-  console.log(`Server is running on port ${port}`);
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}`);
 });
