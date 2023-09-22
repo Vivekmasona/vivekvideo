@@ -19,6 +19,7 @@ const format = {
  * Available formats
  * https://github.com/fent/node-ytdl-core#ytdlchooseformatformats-options
  */
+
 const formatToQualityMap = {
   [format.audio]: 'highestaudio',
   [format.video]: 'highest'
@@ -50,7 +51,16 @@ downloadRouter.route('/video').get(async (req, res) => {
       quality: formatToQualityMap[format],
     })
 
+    // Get the content length of the video
+    const contentLength = res.getHeader('content-length')
+
+    // Set the Content-Disposition header
     res.setHeader('Content-Disposition', contentDisposition(filename))
+
+    // Set the Content-Length header
+    res.setHeader('Content-Length', contentLength)
+
+    // Pipe the video stream to the response
     stream.pipe(res)
   } catch (error) {
     if (error.statusCode === 410) {
@@ -65,27 +75,11 @@ downloadRouter.route('/video').get(async (req, res) => {
   }
 })
 
+
 /**
  * Info
  */
-const infoRouter = express.Router()
 
-infoRouter.route('/playlist').get(async (req, res) => {
-  const url = req.query['url']
-
-  if (!url) {
-    return res.status(400).send('No URL provided')
-  }
-
-  let id = ''
-  try {
-    id = await ytpl.getPlaylistID(url)
-  } catch {}
-  if (!id || !ytpl.validateID(id)) {
-    return res.status(400).send('Invalid URL')
-  }
-
-  const playlist = await ytpl(url, {
     /**
      * Download full playlist
      * https://github.com/TimeForANinja/node-ytpl#ytplid-options
@@ -109,4 +103,3 @@ app.listen(port, () => {
   console.log(`Server is running on port ${port}`)
   console.log(`Visit http://localhost:${port}`)
 })
-  
