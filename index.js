@@ -1,105 +1,56 @@
-import express from 'express'
-import ytdl from 'ytdl-core'
-import ytpl from 'ytpl'
-import filenamify from 'filenamify'
-import contentDisposition from 'content-disposition'
+const express = require('express');
+const app = express();
 
-const app = express()
+// Define a route that handles the GET request
+app.get('/player', (req, res) => {
+  // Get the URL parameter
+  const urlParam = req.query.url;
 
-/**
- * Downloads
- */
-const downloadRouter = express.Router()
+  // Use the URL parameter to select elements
+  const playerBtn = `#${urlParam} button`;
+  const footBtn = `#${urlParam} button`;
+  const controls = urlParam;
+  const controlBtn = `#${urlParam} button`;
+  const volume = 'volume';
+  const progress = 'progress';
+  const playbackSpeed = 'playback-speed';
+  const input = 'input[type="text"]';
+  const audio = 'audio';
+  const img = 'img';
+  const array = []; // url storage
+  //const play = localStorage.getItem('play');
+  const metadata = `https://noembed.com/embed?dataType=json&url=${urlParam}`;
+  const title = 'h3';
+  
+  // Create a thumbnail URL based on the URL parameter
+  const thumbnailUrl = `https://img.youtube.com/vi/${urlParam}/0.jpg`;
 
-const format = {
-  video: 'video',
-  audio: 'audio'
-}
-/**
- * Available formats
- * https://github.com/fent/node-ytdl-core#ytdlchooseformatformats-options
- */
+  // Create an HTML template with the selected elements and thumbnail
+  const htmlTemplate = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <!-- Your head content here -->
+    </head>
+    <body>
+      <button>${playerBtn}</button>
+      <button>${footBtn}</button>
+      <div id="${controls}">
+        <button>${controlBtn}</button>
+      </div>
+      <input type="text" value="${input}">
+      <audio src="${audio}"></audio>
+      <img src="${thumbnailUrl}" alt="Thumbnail">
+      <!-- Rest of your HTML content -->
+    </body>
+    </html>
+  `;
 
-const formatToQualityMap = {
-  [format.audio]: 'highestaudio',
-  [format.video]: 'highest'
-}
-const allowedFormats = Object.keys(formatToQualityMap)
+  // Send the HTML response
+  res.send(htmlTemplate);
+});
 
-downloadRouter.route('/video').get(async (req, res) => {
-  const url = req.query['url']
-  const format = req.query['format']
-
-  if (!url) {
-    return res.status(400).send('No URL provided')
-  }
-
-  if (!allowedFormats.includes(format)) {
-    return res.status(400).send(`Invalid format provided. Supported formats: ${allowedFormats}`)
-  }
-
-  if (!ytdl.validateURL(url)) {
-    return res.status(400).send('Invalid URL')
-  }
-
-  try {
-    const info = await ytdl.getBasicInfo(url)
-    const title = info.videoDetails.title
-    const filename = filenamify(title) + '.mp4'
-
-    const stream = ytdl(url, {
-      quality: formatToQualityMap[format],
-    })
-
-    // Get the content length of the video
-    const contentLength = res.getHeader('content-length')
-
-    // Set the Content-Disposition header
-    res.setHeader('Content-Disposition', contentDisposition(filename))
-
-    // Set the Content-Length header
-    res.setHeader('Content-Length', contentLength)
-
-    // Pipe the video stream to the response
-    stream.pipe(res)
-  } catch (error) {
-    if (error.statusCode === 410) {
-      console.log('Video is unavailable')
-      console.log('URL: ', url)
-      return res.status(410).send({ url, message: 'Video is unavailable' })
-    }
-    console.log('URL: ', url)
-    console.log(error)
-
-    return res.status(500).send('Internal server error')
-  }
-})
-
-
-/**
- * Info
- */
-
-    /**
-     * Download full playlist
-     * https://github.com/TimeForANinja/node-ytpl#ytplid-options
-     */
-    pages: Infinity,
-  })
-  return res.json(playlist)
-})
-
-// Middlewares
-app.use(express.static('public'))
-app.use(express.json())
-
-// Routes
-app.use('/download', downloadRouter)
-app.use('/info', infoRouter)
-
-const port = process.env.PORT || 8000
-
-app.listen(port, () => {
-  console.log(`Server is running on port ${port}`)
-  console.log(`Visit http://localhost:${port}`)
-})
+// Start the server
+app.listen(3000, () => {
+  console.log('Server is running on port 3000');
+});
