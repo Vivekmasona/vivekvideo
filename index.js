@@ -1,56 +1,28 @@
 const express = require('express');
 const app = express();
 
-// Define a route that handles the GET request
-app.get('/player', (req, res) => {
-  // Get the URL parameter
-  const urlParam = req.query.url;
+// URL parameter "url" se YouTube link prapt karein
+app.get('/thumbnail', (req, res) => {
+  const youtubeLink = req.query.url;
 
-  // Use the URL parameter to select elements
-  const playerBtn = `#${urlParam} button`;
-  const footBtn = `#${urlParam} button`;
-  const controls = urlParam;
-  const controlBtn = `#${urlParam} button`;
-  const volume = 'volume';
-  const progress = 'progress';
-  const playbackSpeed = 'playback-speed';
-  const input = 'input[type="text"]';
-  const audio = 'audio';
-  const img = 'img';
-  const array = []; // url storage
-  //const play = localStorage.getItem('play');
-  const metadata = `https://noembed.com/embed?dataType=json&url=${urlParam}`;
-  const title = 'h3';
-  
-  // Create a thumbnail URL based on the URL parameter
-  const thumbnailUrl = `https://img.youtube.com/vi/${urlParam}/0.jpg`;
+  // YouTube link se video ID nikale
+  const videoId = extractVideoId(youtubeLink);
 
-  // Create an HTML template with the selected elements and thumbnail
-  const htmlTemplate = `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <!-- Your head content here -->
-    </head>
-    <body>
-      <button>${playerBtn}</button>
-      <button>${footBtn}</button>
-      <div id="${controls}">
-        <button>${controlBtn}</button>
-      </div>
-      <input type="text" value="${input}">
-      <audio src="${audio}"></audio>
-      <img src="${thumbnailUrl}" alt="Thumbnail">
-      <!-- Rest of your HTML content -->
-    </body>
-    </html>
-  `;
+  // Thumbnail URL banaye
+  const thumbnailUrl = `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`;
 
-  // Send the HTML response
-  res.send(htmlTemplate);
+  // Thumbnail URL ko client ko bheje
+  res.send(`<img src="${thumbnailUrl}" alt="YouTube Thumbnail">`);
 });
 
-// Start the server
+// Server ko port 3000 par sunaye
 app.listen(3000, () => {
   console.log('Server is running on port 3000');
 });
+
+// YouTube link se video ID nikalne ka function
+function extractVideoId(url) {
+  // YouTube link se video ID nikalne ka logic yahan likhein
+  // Example: "https://www.youtube.com/watch?v=VIDEO_ID" se "VIDEO_ID" nikalna
+}
+
