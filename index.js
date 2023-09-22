@@ -1,47 +1,32 @@
 const express = require('express');
-const ytpl = require('node-ytpl');
+const fs = require('fs');
 const app = express();
-const port = 3000; // Replace with your desired port number
+const port = 3000; // You can change this to any port you prefer
 
-app.use(express.json());
+// Define a route for playlist downloads
+app.get('/download/:playlistId', (req, res) => {
+  const playlistId = req.params.playlistId;
 
-const infoRouter = express.Router();
+  // Replace this with logic to generate or fetch playlist data
+  const playlistData = `Playlist ID: ${playlistId}\nSong 1\nSong 2\nSong 3`;
 
-infoRouter.route('/playlist').get(async (req, res) => {
-  const url = req.query['url'];
+  // Create a temporary file with the playlist data
+  const fileName = `playlist_${playlistId}.txt`;
+  fs.writeFileSync(fileName, playlistData);
 
-  if (!url) {
-    return res.status(400).send('No URL provided');
-  }
+  // Set the appropriate headers for file download
+  res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+  res.setHeader('Content-Type', 'text/plain');
 
-  let id = '';
-  try {
-    id = await ytpl.getPlaylistID(url);
-  } catch (error) {
-    console.error('Error fetching playlist ID:', error);
-    return res.status(500).send('Error fetching playlist ID');
-  }
+  // Stream the file to the client
+  const fileStream = fs.createReadStream(fileName);
+  fileStream.pipe(res);
 
-  if (!id || !ytpl.validateID(id)) {
-    return res.status(400).send('Invalid URL');
-  }
-
-  try {
-    const playlist = await ytpl(url, {
-      /**
-       * Download full playlist
-       * https://github.com/TimeForANinja/node-ytpl#ytplid-options
-       */
-      pages: Infinity,
-    });
-    return res.json(playlist);
-  } catch (error) {
-    console.error('Error downloading playlist:', error);
-    return res.status(500).send('Error downloading playlist');
-  }
+  // Clean up the temporary file after it's sent
+  fileStream.on('end', () => {
+    fs.unlinkSync(fileName);
+  });
 });
-
-app.use('/api', infoRouter);
 
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
