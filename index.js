@@ -1,34 +1,49 @@
 const express = require('express');
+const ytpl = require('node-ytpl');
 const app = express();
-const ytdl = require('ytdl-core');
-const fs = require('fs');
+const port = 3000; // Replace with your desired port number
 
-app.get('/download', async (req, res) => {
-  const videoUrl = req.query.url; // Get the video URL from the query parameter
-  if (!videoUrl) {
-    res.status(400).send('Please provide a valid video URL');
-    return;
+app.use(express.json());
+
+const infoRouter = express.Router();
+
+infoRouter.route('/playlist').get(async (req, res) => {
+  const url = req.query['url'];
+
+  if (!url) {
+    return res.status(400).send('No URL provided');
+  }
+
+  let id = '';
+  try {
+    id = await ytpl.getPlaylistID(url);
+  } catch (error) {
+    console.error('Error fetching playlist ID:', error);
+    return res.status(500).send('Error fetching playlist ID');
+  }
+
+  if (!id || !ytpl.validateID(id)) {
+    return res.status(400).send('Invalid URL');
   }
 
   try {
-    const info = await ytdl.getInfo(videoUrl);
-    const videoStream = ytdl(videoUrl, {
-      quality: 'highest',
+    const playlist = await ytpl(url, {
+      /**
+       * Download full playlist
+       * https://github.com/TimeForANinja/node-ytpl#ytplid-options
+       */
+      pages: Infinity,
     });
-
-    res.header('Content-Disposition', `attachment; filename="${info.videoDetails.title}.mp4"`);
-    
-    // Show video size in response headers
-   // res.setHeader('Content-Length', info.videoDetails.lengthSeconds); // You can use 'info.videoDetails.lengthSeconds' for video duration in seconds
-
-    videoStream.pipe(res);
+    return res.json(playlist);
   } catch (error) {
-    console.error('Error:', error);
-    res.status(500).send('An error occurred');
+    console.error('Error downloading playlist:', error);
+    return res.status(500).send('Error downloading playlist');
   }
 });
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
+app.use('/api', infoRouter);
+
+app.listen(port, () => {
+  console.log(`Server is running on port ${port}`);
 });
+
