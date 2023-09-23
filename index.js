@@ -1,53 +1,36 @@
 const express = require('express');
-const ytdl = require('ytdl-core-discord'); // Use ytdl-core-discord
+const ytdl = require('ytdl-core');
 const fs = require('fs');
 const app = express();
 const port = 3000;
 
-app.get('/', (req, res) => {
-  res.send(`
-    <html>
-      <body>
-        <form action="/download" method="get">
-          <label for="url">YouTube Video URL:</label>
-          <input type="text" id="url" name="url">
-          <input type="submit" value="Download">
-        </form>
-      </body>
-    </html>
-  `);
-});
-
-app.get('/download', async (req, res) => {
+app.get('/play', async (req, res) => {
   try {
-    const videoURL = req.query.url; // Get the YouTube video URL from the query parameter
+    // YouTube Live Stream ka video ID ya URL
+    const videoID = 'YOUR_YOUTUBE_LIVE_STREAM_VIDEO_ID_OR_URL';
 
-    if (!videoURL) {
-      return res.status(400).send('Missing video URL');
+    if (!videoID) {
+      return res.status(400).send('Video ID ya URL ki kami hai');
     }
 
-    // Get information about the video (including the title, length, and size)
-    const info = await ytdl.getInfo(videoURL);
-    let videoTitle = info.videoDetails.title;
-    
-    // Remove the word "video" from the title
-    videoTitle = videoTitle.replace(/video/gi, '').trim();
-    
-    const autoTitle = videoTitle.replace(/[^\w\s]/gi, ''); // Remove special characters from the title
-    const sanitizedTitle = autoTitle || 'audio'; // Use the sanitized title or 'audio' as a default
-    const lengthInSeconds = info.videoDetails.lengthSeconds;
-    const fileSizeInBytes = info.videoDetails.lengthBytes;
+    let videoURL = videoID;
+    // Video ID se URL banayein (agar direct URL nahi diya gaya hai)
+    if (!videoID.startsWith('https://')) {
+      videoURL = `https://www.youtube.com/watch?v=${videoID}`;
+    }
 
-    // Set response headers to specify a downloadable file with the auto-generated title
-    res.setHeader('Content-Disposition', `attachment; filename="${sanitizedTitle}.mp3"`);
-    res.setHeader('Content-Type', 'audio/mpeg');
+    // Video se audio extract karein
+    const audioStream = ytdl(videoURL, { quality: 'highestaudio' });
 
-    // Send additional headers for length and size
-    res.setHeader('Content-Length', fileSizeInBytes);
-    res.setHeader('X-Video-Length', lengthInSeconds);
+    // Audio stream ko play karein
+    const command = ffmpeg()
+      .input(audioStream)
+      .audioCodec('aac') // Aap codec ko apne requirements ke hisab se set kar sakte hain
+      .format('s16le')
+      .audioFrequency(44100)
+      .audioChannels(2);
 
-    // Pipe the audio stream into the response
-    ytdl(videoURL, { filter: 'audioonly' }).pipe(res);
+    command.pipe(res);
   } catch (error) {
     console.error('Error:', error);
     res.status(500).send('Internal Server Error');
@@ -55,6 +38,5 @@ app.get('/download', async (req, res) => {
 });
 
 app.listen(port, () => {
-  console.log(`Server is running on port ${port}`);
+  console.log(`Server port ${port} par chalu hai`);
 });
-      
