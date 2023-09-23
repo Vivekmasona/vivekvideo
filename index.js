@@ -1,38 +1,37 @@
 const express = require('express');
+const ytdl = require('ytdl-core');
 const app = express();
+const port = 3000;
 
-// URL parameter "url" se YouTube link prapt karein
-app.get('/thumbnail', (req, res) => {
-  const youtubeLink = req.query.url;
+app.get('/download', async (req, res) => {
+  try {
+    const videoURL = req.query.url; // Get the YouTube video URL from the query parameter
 
-  // YouTube link se video ID nikale
-  const videoId = extractVideoId(youtubeLink);
+    if (!videoURL) {
+      return res.status(400).send('Missing video URL');
+    }
 
-  if (videoId) {
-    // Thumbnail URL banaye
-    const thumbnailUrl = `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`;
+    // Get information about the video (including the title)
+    const info = await ytdl.getInfo(videoURL);
+    const videoTitle = info.videoDetails.title;
+    const autoTitle = videoTitle.replace(/[^\w\s]/gi, ''); // Remove special characters from the title
+    const sanitizedTitle = autoTitle || 'audio'; // Use the sanitized title or 'audio' as a default
 
-    // Thumbnail URL ko client ko bheje
-    res.send(`<img src="${thumbnailUrl}" alt="YouTube Thumbnail">`);
-  } else {
-    res.send('Invalid YouTube link.');
+    // Set response headers to specify a downloadable file with the auto-generated title
+    res.setHeader('Content-Disposition', `attachment; filename="${sanitizedTitle}.mp3"`);
+    res.setHeader('Content-Type', 'audio/mpeg');
+
+    // Pipe the audio stream into the response
+    const audioStream = ytdl(videoURL, { filter: 'audioonly' });
+    res.setHeader('Content-Length', audioStream.headers['content-length']); // Get the content length from the audio stream
+
+    audioStream.pipe(res);
+  } catch (error) {
+    console.error('Error:', error);
+    res.status(500).send('Internal Server Error');
   }
 });
 
-// Server ko port 3000 par sunaye
-app.listen(3000, () => {
-  console.log('Server is running on port 3000');
+app.listen(port, () => {
+  console.log(`Server is running on port ${port}`);
 });
-
-// YouTube link se video ID nikalne ka function
-function extractVideoId(url) {
-  // YouTube video ID ko extract karne ke liye regular expression ka upayog karein
-  const regex = /(?:\/|%3D|v=|vi=|youtu\.be\/|\/embed\/|\/v\/|\/e\/|watch\?v=|youtube.com\/user\/[^#]*#([^\/]*?\/)*)[^#\&\?]*?([^\<\>\"\'\s]*)/;
-  const match = url.match(regex);
-
-  if (match && match[2].length === 11) {
-    return match[2]; // Extracted video ID
-  } else {
-    return null; // Invalid YouTube link
-  }
-      }
