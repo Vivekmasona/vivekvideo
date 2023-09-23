@@ -2,9 +2,9 @@
   "name": "youtube-dl-server",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "app.py",
   "scripts": {
-    "start": "node index.js"
+    "start": "gonicorn app:app"
   },
   "author": "",
   "license": "ISC",
