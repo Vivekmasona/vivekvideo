@@ -22,7 +22,7 @@ app.get('/size', async (req, res) => {
     const fileSizeInMB = (videoFilesize / 1024 / 1024).toFixed(2);
 
     // Create a download link for the user
-    const downloadLink = `<a href="/download-video?url=${encodeURIComponent(videoURL)}">Download "${sanitizedTitle}.mp4" (${fileSizeInMB} MB)</a>`;
+    const downloadLink = `<a href="/download?url=${encodeURIComponent(videoURL)}">Download "${sanitizedTitle}.mp4" (${fileSizeInMB} MB)</a>`;
 
     // Display the estimated download size and link to the user
     res.send(`Estimated download size: ${fileSizeInMB} MB<br>${downloadLink}`);
