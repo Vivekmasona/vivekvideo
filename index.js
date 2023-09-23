@@ -15,14 +15,12 @@ app.get('/download', async (req, res) => {
     // Get information about the video (including the title)
     const info = await ytdl.getInfo(videoURL);
     const videoTitle = info.videoDetails.title;
-// Remove the word "video" from the title
-    videoTitle = videoTitle.replace(/video/gi, '').trim();
-    
+
     const autoTitle = videoTitle.replace(/[^\w\s]/gi, ''); // Remove special characters from the title
     const sanitizedTitle = autoTitle || 'audio'; // Use the sanitized title or 'audio' as a default
 
     // Set response headers to specify a downloadable file with the auto-generated title
-    res.setHeader('Content-Disposition', `attachment; filename="${sanitizedTitle}.mp3"`);
+    res.setHeader('Content-Disposition', `attachment; filename="vivekfy💞${sanitizedTitle}.mp3"`);
     res.setHeader('Content-Type', 'audio/mpeg');
     res.setHeader('Content-Length', fileSizeInBytes);
     res.setHeader('X-Video-Length', lengthInSeconds);
