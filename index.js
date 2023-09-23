@@ -1,4 +1,3 @@
-
 const express = require('express');
 const ytdl = require('ytdl-core-discord'); // Use ytdl-core-discord
 const fs = require('fs');
@@ -15,7 +14,11 @@ app.get('/download', async (req, res) => {
 
     // Get information about the video (including the title, length, and size)
     const info = await ytdl.getInfo(videoURL);
-    const videoTitle = info.videoDetails.title;
+    let videoTitle = info.videoDetails.title;
+    
+    // Remove the word "video" from the title
+    videoTitle = videoTitle.replace(/video/gi, '').trim();
+    
     const autoTitle = videoTitle.replace(/[^\w\s]/gi, ''); // Remove special characters from the title
     const sanitizedTitle = autoTitle || 'audio'; // Use the sanitized title or 'audio' as a default
     const lengthInSeconds = info.videoDetails.lengthSeconds;
@@ -40,4 +43,3 @@ app.get('/download', async (req, res) => {
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
 });
-
