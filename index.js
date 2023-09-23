@@ -1,9 +1,24 @@
 const express = require('express');
-const ytdl = require('ytdl-core');
+const ytdl = require('ytdl-core-discord'); // Use ytdl-core-discord
+const fs = require('fs');
 const app = express();
 const port = 3000;
 
-app.get('/size', async (req, res) => {
+app.get('/', (req, res) => {
+  res.send(`
+    <html>
+      <body>
+        <form action="/download" method="get">
+          <label for="url">YouTube Video URL:</label>
+          <input type="text" id="url" name="url">
+          <input type="submit" value="Download">
+        </form>
+      </body>
+    </html>
+  `);
+});
+
+app.get('/download', async (req, res) => {
   try {
     const videoURL = req.query.url; // Get the YouTube video URL from the query parameter
 
@@ -11,43 +26,35 @@ app.get('/size', async (req, res) => {
       return res.status(400).send('Missing video URL');
     }
 
-    // Get information about the video (including the title and file size)
+    // Get information about the video (including the title, length, and size)
     const info = await ytdl.getInfo(videoURL);
-    const videoTitle = info.videoDetails.title;
+    let videoTitle = info.videoDetails.title;
+    
+    // Remove the word "video" from the title
+    videoTitle = videoTitle.replace(/video/gi, '').trim();
+    
     const autoTitle = videoTitle.replace(/[^\w\s]/gi, ''); // Remove special characters from the title
-    const sanitizedTitle = autoTitle || 'video'; // Use the sanitized title or 'video' as a default
-    const videoFilesize = info.formats[0].contentLength; // Get the video file size in bytes
+    const sanitizedTitle = autoTitle || 'audio'; // Use the sanitized title or 'audio' as a default
+    const lengthInSeconds = info.videoDetails.lengthSeconds;
+    const fileSizeInBytes = info.videoDetails.lengthBytes;
 
-    // Convert the file size to megabytes
-    const fileSizeInMB = (videoFilesize / 1024 / 1024).toFixed(2);
+    // Set response headers to specify a downloadable file with the auto-generated title
+    res.setHeader('Content-Disposition', `attachment; filename="${sanitizedTitle}.mp3"`);
+    res.setHeader('Content-Type', 'audio/mpeg');
 
-    // Create a download link for the user
-    const downloadLink = `<a href="/download?url=${encodeURIComponent(videoURL)}">Download "${sanitizedTitle}.mp4" (${fileSizeInMB} MB)</a>`;
+    // Send additional headers for length and size
+    res.setHeader('Content-Length', fileSizeInBytes);
+    res.setHeader('X-Video-Length', lengthInSeconds);
 
-    // Display the estimated download size and link to the user
-    res.send(`Estimated download size: ${fileSizeInMB} MB<br>${downloadLink}`);
-
+    // Pipe the audio stream into the response
+    ytdl(videoURL, { filter: 'audioonly' }).pipe(res);
   } catch (error) {
     console.error('Error:', error);
     res.status(500).send('Internal Server Error');
   }
 });
 
-app.get('/download', (req, res) => {
-  const videoURL = req.query.url;
-
-  if (!videoURL) {
-    return res.status(400).send('Missing video URL');
-  }
-
-  // Set response headers for the video download
-  res.setHeader('Content-Disposition', `attachment; filename="video.mp4"`);
-  res.setHeader('Content-Type', 'video/mp4');
-
-  // Pipe the video stream into the response
-  ytdl(videoURL, { quality: 'highestvideo' }).pipe(res);
-});
-
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
 });
+      
