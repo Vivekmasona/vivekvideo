@@ -3,7 +3,7 @@ const ytdl = require('ytdl-core');
 const app = express();
 const port = 3000;
 
-app.get('/download', async (req, res) => {
+app.get('/size', async (req, res) => {
   try {
     const videoURL = req.query.url; // Get the YouTube video URL from the query parameter
 
@@ -21,15 +21,31 @@ app.get('/download', async (req, res) => {
     // Convert the file size to megabytes
     const fileSizeInMB = (videoFilesize / 1024 / 1024).toFixed(2);
 
-    // Respond with the estimated file size to the user
-    res.send(`Estimated download size: ${fileSizeInMB} MB`);
+    // Create a download link for the user
+    const downloadLink = `<a href="/download-video?url=${encodeURIComponent(videoURL)}">Download "${sanitizedTitle}.mp4" (${fileSizeInMB} MB)</a>`;
 
-    // You can also choose to initiate the download here if the user confirms
+    // Display the estimated download size and link to the user
+    res.send(`Estimated download size: ${fileSizeInMB} MB<br>${downloadLink}`);
 
   } catch (error) {
     console.error('Error:', error);
     res.status(500).send('Internal Server Error');
   }
+});
+
+app.get('/download', (req, res) => {
+  const videoURL = req.query.url;
+
+  if (!videoURL) {
+    return res.status(400).send('Missing video URL');
+  }
+
+  // Set response headers for the video download
+  res.setHeader('Content-Disposition', `attachment; filename="video.mp4"`);
+  res.setHeader('Content-Type', 'video/mp4');
+
+  // Pipe the video stream into the response
+  ytdl(videoURL, { quality: 'highestvideo' }).pipe(res);
 });
 
 app.listen(port, () => {
