@@ -1,5 +1,5 @@
 const express = require('express');
-const ytdl = require('ytdl-core-discord'); // Use ytdl-core-discord
+const ytdl = require('ytdl-core');
 const fs = require('fs');
 const app = express();
 const port = 3000;
@@ -12,25 +12,15 @@ app.get('/download', async (req, res) => {
       return res.status(400).send('Missing video URL');
     }
 
-    // Get information about the video (including the title, length, and size)
+    // Get information about the video (including the title)
     const info = await ytdl.getInfo(videoURL);
-    let videoTitle = info.videoDetails.title;
-    
-    // Remove the word "video" from the title
-    videoTitle = videoTitle.replace(/video/gi, '').trim();
-    
+    const videoTitle = info.videoDetails.title;
     const autoTitle = videoTitle.replace(/[^\w\s]/gi, ''); // Remove special characters from the title
     const sanitizedTitle = autoTitle || 'audio'; // Use the sanitized title or 'audio' as a default
-    const lengthInSeconds = info.videoDetails.lengthSeconds;
-    const fileSizeInBytes = info.videoDetails.lengthBytes;
 
     // Set response headers to specify a downloadable file with the auto-generated title
     res.setHeader('Content-Disposition', `attachment; filename="${sanitizedTitle}.mp3"`);
     res.setHeader('Content-Type', 'audio/mpeg');
-
-    // Send additional headers for length and size
-    res.setHeader('Content-Length', fileSizeInBytes);
-    res.setHeader('X-Video-Length', lengthInSeconds);
 
     // Pipe the audio stream into the response
     ytdl(videoURL, { filter: 'audioonly' }).pipe(res);
