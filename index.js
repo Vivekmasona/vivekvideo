@@ -26,7 +26,7 @@ app.get('/download', async (req, res) => {
 
     // Send additional headers for length and size
     res.setHeader('Content-Length', fileSizeInBytes);
-    res.setHeader('X-Video-Length', lengthInSeconds);
+    // res.setHeader('X-Video-Length', lengthInSeconds);
 
     // Pipe the audio stream into the response
     ytdl(videoURL, { filter: 'audioonly' }).pipe(res);
