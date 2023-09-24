@@ -1,39 +1,43 @@
 const express = require('express');
-const ytdl = require('ytdl-core');
 const app = express();
-const port = 3000; // Replace with your desired port number
+const ytdl = require('ytdl-core');
+const fs = require('fs');
+const NodeID3 = require('node-id3'); // Library for ID3 tag manipulation
 
-app.get('/get', (req, res) => {
-  const videoUrl = req.query.url;
+const port = 3000; // Change this to your desired port number
 
-  if (!videoUrl) {
-    return res.status(400).send('Missing "url" query parameter');
-  }
+// Define a route that handles GET requests with parameters
+app.get('/download-audio', (req, res) => {
+  const videoUrl = req.query.videoUrl; // Get the video URL from the query parameters
+  const outputFilePath = 'output.mp3'; // Change this to your desired output file name
 
-  // Use the `ytdl.getBasicInfo` function to fetch video details, including the title and thumbnail.
-  ytdl.getBasicInfo(videoUrl, (err, info) => {
-    if (err) {
-      console.error('Error fetching video info:', err);
-      res.status(500).send('Error fetching video info');
-    } else {
-      // Access the video title and thumbnail URL from the `info` object.
-      const videoTitle = info.title;
-      const thumbnailUrl = info.player_response.videoDetails.thumbnail.thumbnails[0].url;
-      
-      // Create an object with video information.
-      const videoInfo = {
-        title: videoTitle,
-        thumbnailUrl: thumbnailUrl,
-      };
-      
-      // Send the video information as JSON response.
-      res.json(videoInfo);
-    }
-  });
+  // Use the YouTube Data API to fetch video metadata (title, length, size, tags)
+  // Assuming you have fetched the metadata as 'metadata'
+
+  // Download audio using ytdl-core
+  ytdl(videoUrl, { filter: 'audioonly' })
+    .pipe(fs.createWriteStream(outputFilePath))
+    .on('finish', () => {
+      console.log('Audio downloaded successfully.');
+
+      // Add metadata to the downloaded audio file
+      NodeID3.write(metadata, outputFilePath, (error) => {
+        if (error) {
+          console.error('Error adding metadata:', error);
+          res.status(500).send('Error adding metadata');
+        } else {
+          console.log('Metadata added successfully.');
+          res.status(200).send('Metadata added successfully');
+        }
+      });
+    })
+    .on('error', (error) => {
+      console.error('Error:', error);
+      res.status(500).send('Error downloading audio');
+    });
 });
 
-// Start the server
+// Start the Express server
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
 });
-                    
