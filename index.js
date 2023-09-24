@@ -3,7 +3,7 @@ const ytdl = require('ytdl-core');
 const fs = require('fs');
 const app = express();
 const port = 3000;
-
+const qualityOption = 'hd720';
 app.get('/download', async (req, res) => {
   try {
     const videoURL = req.query.url; // Query parameter se YouTube video URL prapt karein
