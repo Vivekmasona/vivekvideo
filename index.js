@@ -27,7 +27,7 @@ app.get('/download', async (req, res) => {
     // Response headers ko set karein taki ek downloadable file auto-generated title ke saath specified ho
     res.setHeader('Content-Disposition', `attachment; filename="${sanitizedTitle}.mp4"`);
     res.setHeader('Content-Type', 'video/mp4');
-    res.setHeader('Content-Length', videoSize.toString()); // File size set karein
+    // res.setHeader('Content-Length', videoSize.toString()); // File size set karein
 
     // Video stream ko response mein pipe karein
     videoStream.pipe(res);
