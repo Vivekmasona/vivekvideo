@@ -19,7 +19,7 @@ app.get('/download', async (req, res) => {
     const sanitizedTitle = autoTitle || 'audio'; // Sanitized title ya 'audio' (agar title mein special characters the) ko default ke roop mein istemal karein
 
     // Video stream ko response mein pipe karein, jisse download shuru ho
-    const videoStream = ytdl(videoURL, { quality: 'highestvideo' });
+    const videoStream = ytdl(videoURL, { quality: 'highestvideo[height<=720]' }); // Download only 720p or lower quality
 
     // Video ki size ko calculate karein
     const videoSize = info.videoDetails.lengthSeconds * 1000000; // Convert seconds to bytes
@@ -40,4 +40,4 @@ app.get('/download', async (req, res) => {
 app.listen(port, () => {
   console.log(`Server port ${port} par chalu hai`);
 });
-    
+                  
