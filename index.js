@@ -1,29 +1,40 @@
 const express = require('express');
 const app = express();
-const ytdl = require('ytdl-core');
 const fs = require('fs');
+const fluentFFmpeg = require('fluent-ffmpeg');
 
-app.get('/download', async (req, res) => {
+app.get('/download', (req, res) => {
   const videoUrl = req.query.url;
   if (!videoUrl) {
     res.status(400).send('Please provide a valid video URL');
     return;
   }
 
-  try {
-    const info = await ytdl.getInfo(videoUrl);
-    const videoStream = ytdl(videoUrl, {
-      quality: 'highestaudio',
-      filter: 'audioonly', // This will filter for audio-only streams
-      format: 'mp3', // Specify the format as MP3
-    });
+  const outputFileName = 'output.mp3';
 
-    res.header('Content-Disposition', `attachment; filename="${info.videoDetails.title}.mp3"`);
-    videoStream.pipe(res);
-  } catch (error) {
-    console.error('Error:', error);
-    res.status(500).send('An error occurred');
-  }
+  fluentFFmpeg()
+    .input(videoUrl)
+    .audioCodec('libmp3lame') // Set the audio codec to MP3
+    .toFormat('mp3') // Convert to MP3 format
+    .on('end', () => {
+      res.download(outputFileName, (err) => {
+        if (err) {
+          console.error('Error:', err);
+          res.status(500).send('An error occurred during download');
+        }
+        // Delete the temporary MP3 file after sending it to the client
+        fs.unlink(outputFileName, (err) => {
+          if (err) {
+            console.error('Error:', err);
+          }
+        });
+      });
+    })
+    .on('error', (err) => {
+      console.error('Error:', err);
+      res.status(500).send('An error occurred during conversion');
+    })
+    .save(outputFileName);
 });
 
 const PORT = process.env.PORT || 3000;
