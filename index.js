@@ -1,25 +1,47 @@
-
-
 const express = require('express');
+const ytdl = require('ytdl-core');
+const fs = require('fs');
+
 const app = express();
+const port = 3000;
 
-app.get('/img', (req, res) => {
-  const videoURL = req.query.url; // Get the video URL from the query parameters
-  if (!videoURL) {
-    res.status(400).send('Missing video URL');
-    return;
-  }
+app.get('/download', (req, res) => {
+  const videoUrl = req.query.url;
 
-  const videoId = videoURL.split("v=")[1];
-  if (!videoId) {
-    res.status(400).send('Invalid video URL');
-    return;
-  }
+  // Fetch video information including its title
+  ytdl.getInfo(videoUrl, (err, info) => {
+    if (err) {
+      console.error('Error:', err);
+      return res.status(500).send('Error');
+    }
 
-  const imageURL = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
-  res.json({ imageURL });
+    const videoTitle = info.videoDetails.title;
+    const outputPath = `${videoTitle}.mp4`;
+
+    // Create a writable stream to save the video
+    const videoStream = fs.createWriteStream(outputPath);
+
+    // Download the video with sound
+    ytdl(videoUrl, { filter: 'audioandvideo' }).pipe(videoStream);
+
+    videoStream.on('finish', () => {
+      res.download(outputPath, (err) => {
+        if (err) {
+          console.error('Error:', err);
+          res.status(500).send('Error');
+        } else {
+          console.log('Video downloaded and sent successfully.');
+        }
+      });
+    });
+
+    videoStream.on('error', (error) => {
+      console.error('Error:', error);
+      res.status(500).send('Error');
+    });
+  });
 });
 
-app.listen(3000, () => {
-  console.log('Server is running on port 3000');
+app.listen(port, () => {
+  console.log(`Server is running on port ${port}`);
 });
