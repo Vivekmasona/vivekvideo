@@ -1,43 +1,31 @@
-const express = require('express');
-const app = express();
-const fs = require('fs');
-const fluentFFmpeg = require('fluent-ffmpeg');
+app.get('/download', async (req, res) => {
+  try {
+    const videoURL = req.query.url; // Get the YouTube video URL from the query parameter
 
-app.get('/download', (req, res) => {
-  const videoUrl = req.query.url;
-  if (!videoUrl) {
-    res.status(400).send('Please provide a valid video URL');
-    return;
+    if (!videoURL) {
+      return res.status(400).send('Missing video URL');
+    }
+
+    // Get information about the video (including the title)
+    const info = await ytdl.getInfo(videoURL);
+    const videoTitle = info.videoDetails.title;
+    const autoTitle = videoTitle.replace(/[^\w\s]/gi, ''); // Remove special characters from the title
+    const sanitizedTitle = autoTitle || 'audio'; // Use the sanitized title or 'audio' as a default
+
+    // Set response headers to specify a downloadable file with the auto-generated title
+    res.setHeader('Content-Disposition', `attachment; filename="${sanitizedTitle}.mp3"`);
+    res.setHeader('Content-Type', 'audio/mpeg');
+
+    // Get the content length of the audio stream
+    const contentLength = info.formats.find(format => format.mimeType.startsWith('audio/mp4')).contentLength;
+    if (contentLength) {
+      res.setHeader('Content-Length', contentLength);
+    }
+
+    // Pipe the audio stream into the response
+    ytdl(videoURL, { filter: 'audioonly' }).pipe(res);
+  } catch (error) {
+    console.error('Error:', error);
+    res.status(500).send('Internal Server Error');
   }
-
-  const outputFileName = 'output.mp3';
-
-  fluentFFmpeg()
-    .input(videoUrl)
-    .audioCodec('libmp3lame') // Set the audio codec to MP3
-    .toFormat('mp3') // Convert to MP3 format
-    .on('end', () => {
-      res.download(outputFileName, (err) => {
-        if (err) {
-          console.error('Error:', err);
-          res.status(500).send('An error occurred during download');
-        }
-        // Delete the temporary MP3 file after sending it to the client
-        fs.unlink(outputFileName, (err) => {
-          if (err) {
-            console.error('Error:', err);
-          }
-        });
-      });
-    })
-    .on('error', (err) => {
-      console.error('Error:', err);
-      res.status(500).send('An error occurred during conversion');
-    })
-    .save(outputFileName);
-});
-
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
 });
