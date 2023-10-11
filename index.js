@@ -1,3 +1,9 @@
+const express = require('express');
+const ytdl = require('ytdl-core');
+const fs = require('fs');
+const app = express();
+const port = 3000;
+
 app.get('/download', async (req, res) => {
   try {
     const videoURL = req.query.url; // Get the YouTube video URL from the query parameter
