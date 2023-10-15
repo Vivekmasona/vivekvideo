@@ -1,37 +1,24 @@
 const express = require('express');
-const ytdl = require('ytdl-core');
-const fs = require('fs');
 const app = express();
-const port = 3000;
+const port = process.env.PORT || 3000;
 
-app.get('/download', async (req, res) => {
-  try {
-    const videoURL = req.query.url; // Get the YouTube video URL from the query parameter
+// Serve static files from the "images" directory
+app.use(express.static('images'));
 
-    if (!videoURL) {
-      return res.status(400).send('Missing video URL');
-    }
+// Define a route to get a random image URL
+app.get('/vfy', (req, res) => {
+  // Get a list of image files in the "images" directory
+  const imageFiles = ['https://source.unsplash.com/random/1000x1000/?girl']; // Add your image filenames here
 
-    // Get information about the video (including the title)
-    const info = await ytdl.getInfo(videoURL);
-    const videoTitle = info.videoDetails.title;
-    const autoTitle = videoTitle.replace(/[^\w\s]/gi, ''); // Remove special characters from the title
-    const sanitizedTitle = autoTitle || 'audio'; // Use the sanitized title or 'audio' as a default
+  // Generate a random index to select a random image
+  const randomIndex = Math.floor(Math.random() * imageFiles.length);
 
-    // Set response headers to specify a downloadable file with the auto-generated title
-    res.setHeader('Content-Disposition', `attachment; filename="${sanitizedTitle}.mp3"`);
-    res.setHeader('Content-Type', 'audio/mpeg');
+  // Construct the URL for the random image
+  const randomImageUrl = `/images/${imageFiles[randomIndex]}`;
 
-    // Get the content length of the audio stream
-    const contentLength = info.formats.find(format => format.mimeType.startsWith('audio/mp4')).contentLength;
-    if (contentLength) {
-      res.setHeader('Content-Length', contentLength);
-    }
+  res.json({ imageUrl: randomImageUrl });
+});
 
-    // Pipe the audio stream into the response
-    ytdl(videoURL, { filter: 'audioonly' }).pipe(res);
-  } catch (error) {
-    console.error('Error:', error);
-    res.status(500).send('Internal Server Error');
-  }
+app.listen(port, () => {
+  console.log(`Server is running on port ${port}`);
 });
