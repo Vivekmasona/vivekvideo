@@ -1,33 +1,77 @@
-const express = require('express');
-const ytdl = require('ytdl-core');
+/* eslint-disable no-console */
+const express = require("express");
+const helmet = require("helmet");
+const http = require("http");
+const url = require("url");
+const ytdl = require("ytdl-core");
 
 const app = express();
-const port = 3000;
+const port = process.env.PORT || 4522;
 
-app.get('/play', (req, res) => {
-    const ytLink = req.query.url;
+app.use(helmet());
 
-    if (!ytLink) {
-        return res.status(400).send('Missing YouTube URL');
-    }
-
-    // Get video info
-    ytdl.getInfo(ytLink, (err, info) => {
-        if (err) {
-            return res.status(500).send('Error fetching video information');
-        }
-
-        // Get the highest quality audio stream
-        const audioFormat = ytdl.chooseFormat(info.formats, { quality: 'highestaudio' });
-
-        if (audioFormat) {
-            res.status(200).send(audioFormat.url);
-        } else {
-            res.status(500).send('No suitable audio format found');
-        }
-    });
+// eslint-disable-next-line no-unused-vars
+app.use((err, req, res, next) => {
+	console.error(err.stack);
+	res.status(418).send("oh no error");
 });
 
-app.listen(port, () => {
-    console.log(`Server is running on port ${port}`);
+app.get("/api/img", (req, res, next) => {
+	const imgURL = url.parse(req.query.url);
+	http
+		.request(
+			{
+				// head because we only care about whether it exists or not
+				method: "HEAD",
+				hostname: imgURL.hostname,
+				path: imgURL.pathname,
+				port: imgURL.port
+			},
+			(response) => {
+				res.json({ status: response.statusCode });
+			}
+		)
+		.on("error", (err) => {
+			next(err);
+		})
+		.end();
 });
+
+app.get("/api/get", async (req, res, next) => {
+	let data;
+	let filterURL;
+
+	try {
+		data = await ytdl.getInfo(
+			"https://www.youtube.com/watch?v=" + req.query.url
+		);
+	} catch (err) {
+		next(err);
+		return;
+	}
+
+	try {
+		filterURL = ytdl.chooseFormat(data.formats, {
+			filter: "audioonly",
+			quality: "highest"
+		}).url;
+	} catch (err) {
+		next(err);
+		return;
+	}
+
+	res.json({
+		data: data,
+		directURL: filterURL
+	});
+});
+
+app.get("/*", (req, res) => {
+	res.status(403).send("absolutely not");
+});
+
+app.post("/*", (req, res) => {
+	res.status(403).send("absolutely not");
+});
+
+app.listen(port, "localhost", () => console.log(`listening on port ${port}`));
