@@ -1,19 +1,19 @@
 const express = require('express');
+const ytdl = require('ytdl-core');
 const app = express();
-const port = 3000;
+const port = 3000; // Choose an appropriate port number
 
 app.get('/play', (req, res) => {
-  const videoURL = req.query.url;
+  const youtubeUrl = req.query.url; // Get the YouTube URL from the query parameter
 
-  if (!videoURL) {
-    return res.status(400).send('Missing YouTube video URL');
+  if (!youtubeUrl) {
+    return res.status(400).send('Missing YouTube URL');
   }
 
-  // Replace this part with your code to play the Opus audio from the provided YouTube URL
-  console.log(`Playing Opus audio from URL: ${videoURL}`);
-  // Your code to play Opus audio goes here
+  const stream = ytdl(youtubeUrl, { filter: 'audioonly', quality: 'lowestaudio' });
 
-  res.send('Playing Opus audio...');
+  res.set('Content-Type', 'audio/mpeg');
+  stream.pipe(res);
 });
 
 app.listen(port, () => {
