@@ -1,54 +1,19 @@
 const express = require('express');
-const ytdl = require('ytdl-core');
-const ffmpeg = require('fluent-ffmpeg');
-const opusscript = require('opusscript');
-const fs = require('fs');
-
 const app = express();
 const port = 3000;
 
 app.get('/play', (req, res) => {
   const videoURL = req.query.url;
-  const outputPath = 'output.opus';
 
   if (!videoURL) {
-    res.status(400).send('Missing YouTube video URL');
-    return;
+    return res.status(400).send('Missing YouTube video URL');
   }
 
-  // Create a readable stream from the YouTube video
-  const stream = ytdl(videoURL, {
-    filter: format => format.container === 'opus' && format.encoding === 'opus',
-  });
+  // Replace this part with your code to play the Opus audio from the provided YouTube URL
+  console.log(`Playing Opus audio from URL: ${videoURL}`);
+  // Your code to play Opus audio goes here
 
-  const output = fs.createWriteStream(outputPath);
-
-  // Pipe the YouTube video stream to the output file
-  stream.pipe(output);
-
-  output.on('finish', () => {
-    console.log('Audio file downloaded.');
-
-    // Play the Opus audio
-    const opus = new opusscript.OpusEncoder();
-    const input = fs.createReadStream(outputPath);
-    const proc = new ffmpeg({ source: input })
-      .fromFormat('opus')
-      .toFormat('wav')
-      .pipe()
-      .audioCodec('pcm_s16le')
-      .audioFrequency(48000)
-      .audioChannels(2);
-
-    // Stream the audio to the response
-    proc.stdout.pipe(opus.encoder())
-      .pipe(res);
-  });
-
-  output.on('error', (err) => {
-    console.error('Error downloading audio:', err);
-    res.status(500).send('Error downloading audio');
-  });
+  res.send('Playing Opus audio...');
 });
 
 app.listen(port, () => {
