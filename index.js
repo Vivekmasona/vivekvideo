@@ -1,19 +1,54 @@
 const express = require('express');
+const ytdl = require('ytdl-core');
+const ffmpeg = require('fluent-ffmpeg');
+const opusscript = require('opusscript');
+const fs = require('fs');
+
 const app = express();
-const port = process.env.PORT || 3000;
+const port = 3000;
 
-app.use(express.static('images'));
+app.get('/play', (req, res) => {
+  const videoURL = req.query.url;
+  const outputPath = 'output.opus';
 
-app.get('/ai', (req, res) => {
-  const imageFiles = ['/img/image1.jpg', '/img/image2.jpg', '/img/image3.jpg']; // Add your image filenames here
-  const randomIndex = Math.floor(Math.random() * imageFiles.length);
-  const randomImageFileName = imageFiles[randomIndex];
+  if (!videoURL) {
+    res.status(400).send('Missing YouTube video URL');
+    return;
+  }
 
-  // Set the appropriate content type for the image
-  res.setHeader('Content-Type', 'image/jpeg'); // Modify this based on your image type (e.g., image/png for PNG images)
+  // Create a readable stream from the YouTube video
+  const stream = ytdl(videoURL, {
+    filter: format => format.container === 'opus' && format.encoding === 'opus',
+  });
 
-  // Send the image file
-  res.sendFile(`${__dirname}/images/${randomImageFileName}`);
+  const output = fs.createWriteStream(outputPath);
+
+  // Pipe the YouTube video stream to the output file
+  stream.pipe(output);
+
+  output.on('finish', () => {
+    console.log('Audio file downloaded.');
+
+    // Play the Opus audio
+    const opus = new opusscript.OpusEncoder();
+    const input = fs.createReadStream(outputPath);
+    const proc = new ffmpeg({ source: input })
+      .fromFormat('opus')
+      .toFormat('wav')
+      .pipe()
+      .audioCodec('pcm_s16le')
+      .audioFrequency(48000)
+      .audioChannels(2);
+
+    // Stream the audio to the response
+    proc.stdout.pipe(opus.encoder())
+      .pipe(res);
+  });
+
+  output.on('error', (err) => {
+    console.error('Error downloading audio:', err);
+    res.status(500).send('Error downloading audio');
+  });
 });
 
 app.listen(port, () => {
