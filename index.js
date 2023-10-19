@@ -1,54 +1,44 @@
-
-const express = require("express");
-const cors = require("cors");
-const ytdl = require("ytdl-core");
-const swaggerUi = require("swagger-ui-express");
-const swaggerDocument = require("./swagger.json");
-
-const PORT = process.env.PORT || 5000;
+const express = require('express');
+const ytdl = require('ytdl-core');
 const app = express();
-app.use("/swagger", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
-app.use(cors());
 
-app.listen(PORT, () => {
-  console.log("Server running at http://localhost:", PORT);
-});
+// Define a route that handles the YouTube URL parameter
+app.get('/play', (req, res) => {
+  const url = req.query.url;
 
-app.get("/", (_, res) => {
-  var msg = "hello there";
-  res.json({ status: 200, msg: msg });
-});
+  // Check if the URL is a valid YouTube video URL
+  if (ytdl.validateURL(url)) {
+    // Get the title of the YouTube video
+    ytdl.getBasicInfo(url, (err, info) => {
+      if (err) {
+        console.error('Error fetching video info:', err);
+        return res.status(500).send('Error fetching video info');
+      }
 
-app.get("/play", async (req, res, next) => {
-  try {
-    const url = req.query.url;
-    if (!ytdl.validateURL(url)) {
-      return res.status(400).send({
-        status: "failed",
-        message: "Invalid url",
-      });
-    }
+      const videoTitle = info.title;
 
-    const info = await ytdl.getInfo(url);
-    const videoFormat = ytdl.chooseFormat(info.formats, { quality: 'highest' });
+      // Stream the audio of the YouTube video
+      const stream = ytdl(url, { filter: 'audioonly' });
+      stream.pipe(res);
 
-    if (!videoFormat) {
-      return res.status(400).send({
-        status: "failed",
-        message: "Video format not available",
-      });
-    }
-
-    res.json({
-      status: 200,
-      videoInfo: info.videoDetails,
-      playbackUrl: videoFormat.url,
+      // Create and show a Chrome notification with the video title
+      if ('Notification' in global) {
+        Notification.requestPermission().then(function (permission) {
+          if (permission === 'granted') {
+            const notification = new Notification('Now Playing', {
+              body: videoTitle,
+            });
+          }
+        });
+      }
     });
-  } catch (err) {
-    console.error(err);
-    res.status(500).send({
-      status: "failed",
-      message: "An error occurred while processing this request.",
-    });
+  } else {
+    res.status(400).send('Invalid YouTube URL');
   }
 });
+
+// Start the server on port 3000
+app.listen(3000, () => {
+  console.log('Server is running on port 3000');
+});
+
