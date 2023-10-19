@@ -1,60 +1,54 @@
-#!/usr/bin/env node
 
-'use strict'
+const express = require("express");
+const cors = require("cors");
+const ytdl = require("ytdl-core");
+const swaggerUi = require("swagger-ui-express");
+const swaggerDocument = require("./swagger.json");
 
-const ytdl = require('ytdl-core')
-const FFmpeg = require('fluent-ffmpeg')
-const { PassThrough } = require('stream')
-const fs = require('fs')
-const http = require('http')
-const url = require('url')
+const PORT = process.env.PORT || 5000;
+const app = express();
+app.use("/swagger", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
+app.use(cors());
 
-const server = http.createServer((req, res) => {
-  const query = url.parse(req.url, true).query
+app.listen(PORT, () => {
+  console.log("Server running at http://localhost:", PORT);
+});
 
-  const youtubeUrl = query.url
-  const file = query.link
+app.get("/", (_, res) => {
+  var msg = "hello there";
+  res.json({ status: 200, msg: msg });
+});
 
-  if (!youtubeUrl) {
-    res.statusCode = 400
-    res.end('Error: youtube url not specified')
-    return
-  }
-
-  streamify(youtubeUrl, file).pipe(res)
-})
-
-server.listen(8080, () => {
-  console.log('Server is listening on port 8080')
-})
-
-function streamify(uri, link) {
-  const opt = {
-    videoFormat: 'mp4',
-    quality: 'lowest',
-    audioFormat: 'mp3',
-    filter(format) {
-      return format.container === opt.videoFormat && format.audioBitrate
+app.get("/play", async (req, res, next) => {
+  try {
+    const url = req.query.url;
+    if (!ytdl.validateURL(url)) {
+      return res.status(400).send({
+        status: "failed",
+        message: "Invalid url",
+      });
     }
+
+    const info = await ytdl.getInfo(url);
+    const videoFormat = ytdl.chooseFormat(info.formats, { quality: 'highest' });
+
+    if (!videoFormat) {
+      return res.status(400).send({
+        status: "failed",
+        message: "Video format not available",
+      });
+    }
+
+    res.json({
+      status: 200,
+      videoInfo: info.videoDetails,
+      playbackUrl: videoFormat.url,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).send({
+      status: "failed",
+      message: "An error occurred while processing this request.",
+    });
   }
-
-  const video = ytdl(uri, opt)
-  const stream = link ? fs.createWriteStream(link) : new PassThrough()
-  const ffmpeg = new FFmpeg(video)
-
-  process.nextTick(() => {
-    const output = ffmpeg.format(opt.audioFormat).pipe(stream)
-
-    ffmpeg.once('error', (error) => stream.emit('error', error))
-    output.once('error', (error) => {
-      video.end()
-      stream.emit('error', error)
-    })
-  })
-
-  stream.video = video
-  stream.ffmpeg = ffmpeg
-
-  return stream
-}
-
+});
