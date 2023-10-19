@@ -1,77 +1,60 @@
-/* eslint-disable no-console */
-const express = require("express");
-const helmet = require("helmet");
-const http = require("http");
-const url = require("url");
-const ytdl = require("ytdl-core");
+#!/usr/bin/env node
 
-const app = express();
-const port = process.env.PORT || 4522;
+'use strict'
 
-app.use(helmet());
+const ytdl = require('ytdl-core')
+const FFmpeg = require('fluent-ffmpeg')
+const { PassThrough } = require('stream')
+const fs = require('fs')
+const http = require('http')
+const url = require('url')
 
-// eslint-disable-next-line no-unused-vars
-app.use((err, req, res, next) => {
-	console.error(err.stack);
-	res.status(418).send("oh no error");
-});
+const server = http.createServer((req, res) => {
+  const query = url.parse(req.url, true).query
 
-app.get("/api/img", (req, res, next) => {
-	const imgURL = url.parse(req.query.url);
-	http
-		.request(
-			{
-				// head because we only care about whether it exists or not
-				method: "HEAD",
-				hostname: imgURL.hostname,
-				path: imgURL.pathname,
-				port: imgURL.port
-			},
-			(response) => {
-				res.json({ status: response.statusCode });
-			}
-		)
-		.on("error", (err) => {
-			next(err);
-		})
-		.end();
-});
+  const youtubeUrl = query.url
+  const file = query.link
 
-app.get("/api/get", async (req, res, next) => {
-	let data;
-	let filterURL;
+  if (!youtubeUrl) {
+    res.statusCode = 400
+    res.end('Error: youtube url not specified')
+    return
+  }
 
-	try {
-		data = await ytdl.getInfo(
-			"https://www.youtube.com/watch?v=" + req.query.url
-		);
-	} catch (err) {
-		next(err);
-		return;
-	}
+  streamify(youtubeUrl, file).pipe(res)
+})
 
-	try {
-		filterURL = ytdl.chooseFormat(data.formats, {
-			filter: "audioonly",
-			quality: "highest"
-		}).url;
-	} catch (err) {
-		next(err);
-		return;
-	}
+server.listen(8080, () => {
+  console.log('Server is listening on port 8080')
+})
 
-	res.json({
-		data: data,
-		directURL: filterURL
-	});
-});
+function streamify(uri, link) {
+  const opt = {
+    videoFormat: 'mp4',
+    quality: 'lowest',
+    audioFormat: 'mp3',
+    filter(format) {
+      return format.container === opt.videoFormat && format.audioBitrate
+    }
+  }
 
-app.get("/*", (req, res) => {
-	res.status(403).send("absolutely not");
-});
+  const video = ytdl(uri, opt)
+  const stream = link ? fs.createWriteStream(link) : new PassThrough()
+  const ffmpeg = new FFmpeg(video)
 
-app.post("/*", (req, res) => {
-	res.status(403).send("absolutely not");
-});
+  process.nextTick(() => {
+    const output = ffmpeg.format(opt.audioFormat).pipe(stream)
 
-app.listen(port, "localhost", () => console.log(`listening on port ${port}`));
+    ffmpeg.once('error', (error) => stream.emit('error', error))
+    output.once('error', (error) => {
+      video.end()
+      stream.emit('error', error)
+    })
+  })
+
+  stream.video = video
+  stream.ffmpeg = ffmpeg
+
+  return stream
+}
+
