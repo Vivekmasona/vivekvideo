@@ -13,7 +13,7 @@ app.get('/download', async (req, res) => {
   try {
     const info = await ytdl.getInfo(videoUrl);
     const videoStream = ytdl(videoUrl, {
-      quality: 'highest',
+      quality: 'lowest',
     });
 
     res.header('Content-Disposition', `attachment; filename="${info.videoDetails.title}.mp4"`);
