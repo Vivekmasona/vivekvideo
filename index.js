@@ -3,8 +3,8 @@ const ytdl = require('ytdl-core');
 const app = express();
 const port = 3000;
 
-// Define a route to get the direct videoplayback URL from a YouTube URL
-app.get('/video', async (req, res) => {
+// Define a route to get the direct low-quality audio stream URL from a YouTube URL
+app.get('/audio', async (req, res) => {
   const ytUrl = req.query.url;
 
   if (!ytUrl) {
@@ -14,13 +14,21 @@ app.get('/video', async (req, res) => {
 
   try {
     const info = await ytdl.getInfo(ytUrl);
-    const videoInfo = ytdl.chooseFormat(info.formats, { quality: 'highest' });
-    const videoplaybackUrl = videoInfo.url;
+    
+    // Choose the lowest quality audio format
+    const audioInfo = ytdl.chooseFormat(info.formats, { quality: 'lowestaudio' });
 
-    // Redirect to the direct videoplayback URL for the video
-    res.redirect(videoplaybackUrl);
+    if (!audioInfo) {
+      res.status(404).send('No low-quality audio stream found for this video.');
+      return;
+    }
+
+    const audioUrl = audioInfo.url;
+
+    // Redirect to the direct low-quality audio stream URL
+    res.redirect(audioUrl);
   } catch (error) {
-    res.status(500).send('Error fetching videoplayback URL.');
+    res.status(500).send('Error fetching low-quality audio stream URL.');
   }
 });
 
