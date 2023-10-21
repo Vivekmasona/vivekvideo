@@ -3,7 +3,7 @@ const ytdl = require('ytdl-core');
 const app = express();
 const port = 3000;
 
-// Define a route to get the direct audio stream URL from a YouTube URL
+// Define a route to get the direct low-quality audio stream URL from a YouTube URL
 app.get('/audio', async (req, res) => {
   const ytUrl = req.query.url;
 
@@ -23,16 +23,25 @@ app.get('/audio', async (req, res) => {
       return;
     }
 
-    const audioUrl = audioFormats[0].url; // Select the first audio format
+    // Find the audio format with the lowest quality
+    let lowestQualityAudio = audioFormats[0];
+    for (const format of audioFormats) {
+      if (format.audioBitrate < lowestQualityAudio.audioBitrate) {
+        lowestQualityAudio = format;
+      }
+    }
 
-    // Redirect to the direct audio stream URL
+    const audioUrl = lowestQualityAudio.url;
+
+    // Redirect to the direct low-quality audio stream URL
     res.redirect(audioUrl);
   } catch (error) {
-    res.status(500).send('Error fetching audio stream URL.');
+    res.status(500).send('Error fetching low-quality audio stream URL.');
   }
 });
 
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
 });
+
 
