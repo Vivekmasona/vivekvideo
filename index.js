@@ -3,7 +3,7 @@ const ytdl = require('ytdl-core');
 const app = express();
 const port = 3000;
 
-// Define a route to get the videoplayback URL from a YouTube URL
+// Define a route to get the direct videoplayback URL from a YouTube URL
 app.get('/video', async (req, res) => {
   const ytUrl = req.query.url;
 
@@ -17,7 +17,8 @@ app.get('/video', async (req, res) => {
     const videoInfo = ytdl.chooseFormat(info.formats, { quality: 'highest' });
     const videoplaybackUrl = videoInfo.url;
 
-    res.send(`Videoplayback URL: ${videoplaybackUrl}`);
+    // Redirect to the direct videoplayback URL for the video
+    res.redirect(videoplaybackUrl);
   } catch (error) {
     res.status(500).send('Error fetching videoplayback URL.');
   }
