@@ -1,18 +1,26 @@
 const express = require('express');
+const ytdl = require('ytdl-core');
 const app = express();
 const port = 3000;
 
-// Define a route to get a videoplayback URL as a query parameter
-app.get('/video', (req, res) => {
-  const videoplaybackUrl = req.query.videoplaybackUrl;
-  
-  if (!videoplaybackUrl) {
-    res.status(400).send('Videoplayback URL parameter is missing.');
+// Define a route to get the videoplayback URL from a YouTube URL
+app.get('/video', async (req, res) => {
+  const ytUrl = req.query.url;
+
+  if (!ytUrl) {
+    res.status(400).send('YouTube video URL parameter is missing.');
     return;
   }
-  
-  // Now you can use the videoplaybackUrl in your code
-  res.send(`Videoplayback URL: ${videoplaybackUrl}`);
+
+  try {
+    const info = await ytdl.getInfo(ytUrl);
+    const videoInfo = ytdl.chooseFormat(info.formats, { quality: 'highest' });
+    const videoplaybackUrl = videoInfo.url;
+
+    res.send(`Videoplayback URL: ${videoplaybackUrl}`);
+  } catch (error) {
+    res.status(500).send('Error fetching videoplayback URL.');
+  }
 });
 
 app.listen(port, () => {
