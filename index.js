@@ -24,9 +24,13 @@ app.get('/download', async (req, res) => {
       return res.status(404).send('No suitable format found');
     }
 
+    // Get the content length (file size) of the video
+    const contentLength = format.contentLength;
+
     // Set response headers to specify a downloadable video file with the auto-generated title
     res.setHeader('Content-Disposition', `attachment; filename="${sanitizedTitle}.mp4"`);
     res.setHeader('Content-Type', 'video/mp4');
+    res.setHeader('Content-Length', contentLength); // Add content length to the headers
 
     // Pipe the video stream into the response
     ytdl(videoURL, { format }).pipe(res);
