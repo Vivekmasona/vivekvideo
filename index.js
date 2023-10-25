@@ -1,47 +1,51 @@
 const express = require('express');
 const ytdl = require('ytdl-core');
+const fs = require('fs');
 const app = express();
 const port = 3000;
 
-app.get('/download', async (req, res) => {
-  try {
-    const videoURL = req.query.url; // Get the YouTube video URL from the query parameter
+app.use(express.urlencoded({ extended: true }));
+app.set('view engine', 'ejs');
 
-    if (!videoURL) {
-      return res.status(400).send('Missing video URL');
+app.get('/', (req, res) => {
+    res.render('index');
+});
+
+app.post('/download', async (req, res) => {
+    const url = req.body.url;
+    if (!ytdl.validateURL(url)) {
+        res.send('Invalid YouTube URL.');
+        return;
     }
 
-    // Get information about the video
-    const info = await ytdl.getInfo(videoURL);
-    const videoTitle = info.videoDetails.title;
-    const autoTitle = videoTitle.replace(/[^\w\s]/gi, ''); // Remove special characters from the title
-    const sanitizedTitle = autoTitle || 'video'; // Use the sanitized title or 'video' as a default
+    const info = await ytdl.getInfo(url);
+    const title = info.videoDetails.title;
 
-    // Select the best available format
-    const format = ytdl.chooseFormat(info.formats, { quality: 'highest' });
+    // For audio download
+    const audio = ytdl(url, { quality: 'highestaudio' });
 
-    if (!format) {
-      return res.status(404).send('No suitable format found');
+    audio.pipe(res, {
+        'content-disposition': `attachment; filename="${title}.mp3"`,
+        'Content-Type': 'audio/mpeg',
+    });
+});
+
+app.get('/video', (req, res) => {
+    const url = req.query.url;
+    if (!ytdl.validateURL(url)) {
+        res.send('Invalid YouTube URL.');
+        return;
     }
 
-    // Get the content length (file size) of the video
-    const contentLength = format.contentLength;
+    const title = 'video';
+    const video = ytdl(url, { quality: 'highestvideo' });
 
-    // Set response headers to specify a downloadable video file with the auto-generated title
-    res.setHeader('Content-Disposition', `attachment; filename="${sanitizedTitle}.mp4"`);
+    res.setHeader('Content-Disposition', `attachment; filename="${title}.mp4"`);
     res.setHeader('Content-Type', 'video/mp4');
-    res.setHeader('Content-Length', contentLength); // Add content length to the headers
-
-    // Pipe the video stream into the response
-    ytdl(videoURL, { format }).pipe(res);
-
-  } catch (error) {
-    console.error('Error:', error);
-    res.status(500).send('Internal Server Error');
-  }
+    video.pipe(res);
 });
 
 app.listen(port, () => {
-  console.log(`Server is running on port ${port}`);
+    console.log(`Server is running on port ${port}`);
 });
 
