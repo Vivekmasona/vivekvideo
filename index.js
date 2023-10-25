@@ -11,21 +11,23 @@ app.get('/download', async (req, res) => {
       return res.status(400).send('Missing video URL');
     }
 
-    // Get information about the video (including the title and size)
+    // Get information about the video
     const info = await ytdl.getInfo(videoURL);
     const videoTitle = info.videoDetails.title;
     const autoTitle = videoTitle.replace(/[^\w\s]/gi, ''); // Remove special characters from the title
-    const sanitizedTitle = autoTitle || 'audio'; // Use the sanitized title or 'audio' as a default
-    const audioFormats = ytdl.filterFormats(info.formats, 'audioonly');
-    const fileSize = audioFormats[0].contentLength || 'unknown'; // Get the audio size in bytes
+    const sanitizedTitle = autoTitle || 'video'; // Use the sanitized title or 'video' as a default
 
-    // Set response headers to specify a downloadable audio file with the auto-generated title and size
-    res.setHeader('Content-Disposition', `attachment; filename="${sanitizedTitle}.mp3"`);
-    res.setHeader('Content-Type', 'audio/mpeg');
-    res.setHeader('Content-Length', fileSize);
+    // Select the video format you want (in this case, the highest quality available)
+    const videoFormats = ytdl.filterFormats(info.formats, 'videoonly');
+    const format = videoFormats[0];
 
-    // Pipe the audio stream into the response
-    ytdl(videoURL, { format: audioFormats[0] }).pipe(res);
+    // Set response headers to specify a downloadable video file with the auto-generated title
+    res.setHeader('Content-Disposition', `attachment; filename="${sanitizedTitle}.mp4"`);
+    res.setHeader('Content-Type', 'video/mp4');
+    res.setHeader('Content-Length', format.contentLength);
+
+    // Pipe the video stream into the response
+    ytdl(videoURL, { format }).pipe(res);
 
   } catch (error) {
     console.error('Error:', error);
