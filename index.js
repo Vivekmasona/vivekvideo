@@ -17,17 +17,16 @@ app.get('/download', async (req, res) => {
     const autoTitle = videoTitle.replace(/[^\w\s]/gi, ''); // Remove special characters from the title
     const sanitizedTitle = autoTitle || 'video'; // Use the sanitized title or 'video' as a default
 
-    // Select the video format you want (in this case, the 360p quality)
-    const videoFormats = ytdl.filterFormats(info.formats, 'videoonly');
-    const format = videoFormats.find(format => format.qualityLabel === '360p');
+    // Select the best available video format (includes both video and audio)
+    const format = ytdl.chooseFormat(info.formats, { quality: 'highest' });
 
     if (!format) {
-      return res.status(404).send('360p video format not found');
+      return res.status(404).send('No suitable format found');
     }
 
     // Set response headers to specify a downloadable video file with the auto-generated title
     res.setHeader('Content-Disposition', `attachment; filename="${sanitizedTitle}.mp4"`);
-    res.setHeader('Content-Type', 'video/mp4');
+    res.setHeader('Content-Type', format.mimeType);
     res.setHeader('Content-Length', format.contentLength);
 
     // Pipe the video stream into the response
