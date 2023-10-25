@@ -17,8 +17,8 @@ app.get('/download', async (req, res) => {
     const autoTitle = videoTitle.replace(/[^\w\s]/gi, ''); // Remove special characters from the title
     const sanitizedTitle = autoTitle || 'video'; // Use the sanitized title or 'video' as a default
 
-    // Select the best available video format (includes both video and audio)
-    const format = ytdl.chooseFormat(info.formats, { quality: 'highest' });
+    // Select the best available video format with 1080p quality
+    const format = ytdl.chooseFormat(info.formats, { quality: 'highestvideo' });
 
     if (!format) {
       return res.status(404).send('No suitable format found');
