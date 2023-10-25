@@ -17,17 +17,21 @@ app.get('/download', async (req, res) => {
     const autoTitle = videoTitle.replace(/[^\w\s]/gi, ''); // Remove special characters from the title
     const sanitizedTitle = autoTitle || 'video'; // Use the sanitized title or 'video' as a default
 
-    // Select the video format you want (in this case, the highest quality available)
+    // Select the 720p video format
     const videoFormats = ytdl.filterFormats(info.formats, 'videoonly');
-    const format = videoFormats[0];
+    const format720p = videoFormats.find(format => format.qualityLabel === '720p');
+
+    if (!format720p) {
+      return res.status(404).send('720p video not found');
+    }
 
     // Set response headers to specify a downloadable video file with the auto-generated title
     res.setHeader('Content-Disposition', `attachment; filename="${sanitizedTitle}.mp4"`);
     res.setHeader('Content-Type', 'video/mp4');
-    res.setHeader('Content-Length', format.contentLength);
+    res.setHeader('Content-Length', format720p.contentLength);
 
-    // Pipe the video stream into the response
-    ytdl(videoURL, { format }).pipe(res);
+    // Pipe the 720p video stream into the response
+    ytdl(videoURL, { format: format720p }).pipe(res);
 
   } catch (error) {
     console.error('Error:', error);
