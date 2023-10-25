@@ -11,11 +11,9 @@ app.get('/download', async (req, res) => {
       return res.status(400).send('Missing video URL');
     }
 
-    // Get information about the video (including the title, channel name, and singer name)
+    // Get information about the video (including the title and size)
     const info = await ytdl.getInfo(videoURL);
     const videoTitle = info.videoDetails.title;
-    const channelName = info.videoDetails.author.name; // Get the channel name
-    const singerName = info.videoDetails.media.artist; // Get the singer name
     const autoTitle = videoTitle.replace(/[^\w\s]/gi, ''); // Remove special characters from the title
     const sanitizedTitle = autoTitle || 'audio'; // Use the sanitized title or 'audio' as a default
     const audioFormats = ytdl.filterFormats(info.formats, 'audioonly');
@@ -25,10 +23,6 @@ app.get('/download', async (req, res) => {
     res.setHeader('Content-Disposition', `attachment; filename="${sanitizedTitle}.mp3"`);
     res.setHeader('Content-Type', 'audio/mpeg');
     res.setHeader('Content-Length', fileSize);
-    
-    // Include channel and singer names in response headers
-    res.setHeader('X-Channel-Name', channelName);
-    res.setHeader('X-Singer-Name', singerName);
 
     // Pipe the audio stream into the response
     ytdl(videoURL, { format: audioFormats[0] }).pipe(res);
