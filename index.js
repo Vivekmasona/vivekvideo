@@ -1,31 +1,58 @@
 const express = require('express');
+const ytdl = require('ytdl-core');
+const fs = require('fs');
 const app = express();
-const request = require('request');
+const port = 3000; // You can change this to the desired port
 
-app.get('/mp3', (req, res) => {
-  // Extract the YouTube link from the 'url' query parameter
-  const ytLink = req.query.url;
+app.get('/mp4', (req, res) => {
+  // Get the video URL from the query parameter 'url'
+  const videoUrl = req.query.url;
 
+  // Check if the 'url' parameter is provided
+  if (!videoUrl) {
+    return res.status(400).send('Please provide a valid video URL.');
+  }
+
+  // Set the options for downloading audio
   const options = {
-    method: 'GET',
-    url: 'https://youtube-mp36.p.rapidapi.com/dl',
-    qs: { id: ytLink }, // Use the extracted YouTube link
-    headers: {
-      'X-RapidAPI-Key': '650590bd0fmshcf4139ece6a3f8ep145d16jsn955dc4e5fc9a',
-      'X-RapidAPI-Host': 'youtube-mp36.p.rapidapi.com'
-    }
+    quality: 'highestaudio',
+    filter: 'audioonly',
   };
 
-  request(options, function (error, response, body) {
-    if (error) {
-      res.status(500).send('Error');
-    } else {
-      res.send(body);
-    }
+  // Create a readable stream from the video URL
+  const stream = ytdl(videoUrl, options);
+
+  // Set the filename for the downloaded audio file
+  const filename = 'output.mp3';
+
+  // Create a writable stream to save the audio
+  const output = fs.createWriteStream(filename);
+
+  // Pipe the readable stream to the writable stream
+  stream.pipe(output);
+
+  // Handle the end event when the download is complete
+  output.on('finish', () => {
+    res.download(filename, 'audio.mp3', (err) => {
+      if (err) {
+        console.error('Error:', err);
+        res.status(500).send('An error occurred while downloading the audio.');
+      } else {
+        console.log('Download complete.');
+        // Clean up the temporary file
+        fs.unlinkSync(filename);
+      }
+    });
+  });
+
+  // Handle errors
+  stream.on('error', (err) => {
+    console.error('Error:', err);
+    res.status(500).send('An error occurred while processing the video URL.');
   });
 });
 
-const PORT = 3000; // You can use any port you prefer
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
+app.listen(port, () => {
+  console.log(`Server is running on port ${port}`);
 });
+
