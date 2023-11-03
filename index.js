@@ -1,88 +1,56 @@
-const express = require('express');
-const ytdl = require('ytdl-core');
+const express = require("express");
+const path = require("path");
+const fs = require("fs");
+const ytdl = require("ytdl-core");
+const os = require("os");
+const Utils = require("./src/utils");
+require("dotenv").config();
+
 const app = express();
-const port = 3000;
+const port = process.env.PORT || 4000;
 
-// Route for downloading audio
-app.get('/download/audio', async (req, res) => {
-  try {
-    const videoURL = req.query.url; // Get the YouTube video URL from the query parameter
+const dataPath = path.join(os.tmpdir(), "data");
 
-    if (!videoURL) {
-      return res.status(400).send('Missing video URL');
-    }
+Utils.createDir(dataPath);
 
-    // Get information about the video
-    const info = await ytdl.getInfo(videoURL);
-    const videoTitle = info.videoDetails.title;
-    const autoTitle = videoTitle.replace(/[^\w\s]/gi, ''); // Remove special characters from the title
-    const sanitizedTitle = autoTitle || 'audio'; // Use the sanitized title or 'audio' as a default
-    const audioFormats = ytdl.filterFormats(info.formats, 'audioonly');
-
-    // Select the best available audio format
-    const format = audioFormats[0];
-
-    if (!format) {
-      return res.status(404).send('No suitable audio format found');
-    }
-
-    // Get the content length (file size) of the audio
-    const contentLength = format.contentLength;
-
-    // Set response headers to specify a downloadable audio file with the auto-generated title
-    res.setHeader('Content-Disposition', `attachment; filename="${sanitizedTitle}(vivek masona).mp3"`);
-    res.setHeader('Content-Type', 'audio/mpeg');
-    res.setHeader('Content-Length', contentLength); // Add content length to the headers
-
-    // Pipe the audio stream into the response
-    ytdl(videoURL, { format }).pipe(res);
-
-  } catch (error) {
-    console.error('Error:', error);
-    res.status(500).send('Internal Server Error');
-  }
-});
-
-// Route for downloading video
-app.get('/download/video', async (req, res) => {
-  try {
-    const videoURL = req.query.url; // Get the YouTube video URL from the query parameter
-
-    if (!videoURL) {
-      return res.status(400).send('Missing video URL');
-    }
-
-    // Get information about the video
-    const info = await ytdl.getInfo(videoURL);
-    const videoTitle = info.videoDetails.title;
-    const autoTitle = videoTitle.replace(/[^\w\s]/gi, ''); // Remove special characters from the title
-    const sanitizedTitle = autoTitle || 'video'; // Use the sanitized title or 'video' as a default
-
-    // Select the best available video format
-    const format = ytdl.chooseFormat(info.formats, { quality: 'highest' });
-
-    if (!format) {
-      return res.status(404).send('No suitable video format found');
-    }
-
-    // Get the content length (file size) of the video
-    const contentLength = format.contentLength;
-
-    // Set response headers to specify a downloadable video file with the auto-generated title
-    res.setHeader('Content-Disposition', `attachment; filename="${sanitizedTitle}(vivek masona).mp4"`);
-    res.setHeader('Content-Type', 'video/mp4');
-    res.setHeader('Content-Length', contentLength); // Add content length to the headers
-
-    // Pipe the video stream into the response
-    ytdl(videoURL, { format }).pipe(res);
-
-  } catch (error) {
-    console.error('Error:', error);
-    res.status(500).send('Internal Server Error');
-  }
-});
+app.use("/data", express.static(dataPath));
+app.use(express.static(__dirname + "/public"));
 
 app.listen(port, () => {
-  console.log(`Server is running on port ${port}`);
+    console.log(`Server running on port ${port}`);
 });
+
+app.get("/download", async (req, res) => {
+    // Extract the YouTube URL from the 'url' query parameter
+    const youtubeUrl = req.query.url;
+
+    // Check if the 'url' parameter is provided
+    if (!youtubeUrl) {
+        return res.status(400).json({ error: "Missing 'url' parameter" });
+    }
+
+    const sessionID = Date.now(); // Generate a unique session ID
+    const sessionDir = path.join(dataPath, sessionID);
+    const fullSessionDirPath = path.join(dataPath, sessionID);
+
+    Utils.createDir(sessionDir);
+
+    setTimeout(() => {
+        fs.rmSync(sessionDir, { recursive: true });
+    }, 180 * 1000);
+
+    try {
+        const info = await Utils.getInfo(youtubeUrl);
+
+        info.endpointSongPath = path.join(sessionDir, info.filename);
+        info.songPath = path.join(fullSessionDirPath, info.filename);
+        info.fullSessionDirPath = fullSessionDirPath;
+
+        await Utils.downloadSong(info, res);
+    } catch (error) {
+        return res.status(500).json({ error: "Failed to download the audio" });
+    }
+});
+
+// The rest of your existing code for getInfo, clearBucket, bucketItem, getStats, and updateVisitStats endpoints goes here
 
